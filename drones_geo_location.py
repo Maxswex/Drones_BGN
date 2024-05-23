@@ -2,7 +2,7 @@ import json
 
 class GeoLocation:
 
-    def __init__(self, latitude, longitude, altitude ):
+    def __init__(self, latitude, longitude, altitude):
         self.latitude = latitude
         self.longitude = longitude
         self.altitude = altitude
