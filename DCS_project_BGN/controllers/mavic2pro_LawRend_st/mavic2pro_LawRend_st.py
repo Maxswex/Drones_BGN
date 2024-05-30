@@ -195,7 +195,7 @@ class Mavic (Supervisor):
                         "z": person.getPosition()[2]}
                     detection_msg = {
                         "id_detection": str(z.getId()),
-                        "id_drone": self.my_def.upper()[-1],
+                        "id_drone": f"S_{self.my_def.upper()[-1]}",
                         "drone_position": drone_pos,
                         "heat_pos": heat_pos,
                         "time": timestamp
@@ -235,7 +235,7 @@ class Mavic (Supervisor):
                         "z": person.getPosition()[2]}
                     detection_msg = {
                         "id_detection": str(x.getId()),
-                        "id_drone": self.my_def.upper()[-1],
+                        "id_drone": f"S_{self.my_def.upper()[-1]}",
                         "drone_position": drone_pos,
                         "heat_pos": heat_pos,
                         "time": timestamp
