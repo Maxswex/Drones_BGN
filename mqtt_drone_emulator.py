@@ -42,15 +42,15 @@ def publish_telemetry_data(data):
 
 
 def publish_sensible_coordinates(data):
-    target_topic = "{0}/{1}/{2}".format(
+    target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
         data['id_drone'],
         MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
     # Get id detection, heat position and timestamp from the dictionary (e.g. the JSON)
     device_payload_string = {key:data[key] for key in ['id_detection', 'heat_pos', 'time']}
     mqtt_client.publish(target_topic, str(device_payload_string), 0, False)
     print(f"FOUND A SENSIBLE COORDINATES!! Published to the following topic: {target_topic} \nPayload: {device_payload_string}")
-
 
 
 vehicle_id = "{0}".format(MqttConfigurationParameters.MQTT_USERNAME)
@@ -67,14 +67,20 @@ mqtt_client.loop_start()
 # Reading data from the JSON file
 data = json_manipulations.read_json(json_path)
 # Initial log of the device info
-publish_device_info(data)
+# publish_device_info(data)
 
+current_drone_id = None
 for message_id in range(message_limit):
     # Reading data from the JSON file
     data = json_manipulations.read_json(json_path)
+
+    # Check if the drone_id has changed
+    if data['id_drone'] != current_drone_id:
+        current_drone_id = data['id_drone']
+        publish_device_info(data)
+
     publish_telemetry_data(data)
     time.sleep(10)
-    #sensible_coordinates.update_measurement()
     publish_sensible_coordinates(data)
     time.sleep(5)
 
