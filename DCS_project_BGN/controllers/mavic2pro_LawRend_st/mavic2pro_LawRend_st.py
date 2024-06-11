@@ -22,12 +22,61 @@ from controller import Supervisor
 from controller import Node
 from controller import CameraRecognitionObject
 import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parents[3]
+mqtt_parameters_path = project_root / 'mqtt_parameters.py'
+sys.path.append(str(project_root))
+from mqtt_parameters import MqttConfigurationParameters
 import json
+import paho.mqtt.client as mqtt
 import time
+import os
 try:
     import numpy as np
 except ImportError:
     sys.exit("Warning: 'numpy' module not found.")
+
+
+#---------- MQTT communications methods ----------
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+
+def publish_device_info(drone_id):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_INFO_TOPIC)
+    # Get only device info from the dictionary (e.g. the JSON)
+    mqtt_client.publish(target_topic, drone_id, 0, True)
+    print(f"Vehicle Info Published: Topic: {target_topic} Payload: {drone_id}")
+
+def publish_telemetry_data(drone_id, drone_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
+    # Get only telemetry and timestamp from the dictionary (e.g. the JSON)
+    device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"Telemetry Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
+
+
+def publish_sensible_coordinates(drone_id, detection_id,  heat_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
+    # Get id detection, heat position and timestamp from the dictionary (e.g. the JSON)
+    device_payload_string = f"heat detection id: {detection_id}, heat position: {heat_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"FOUND A SENSIBLE COORDINATES!! Published to the following topic: {target_topic} \nPayload: {device_payload_string}")
+
+
+#------------------------------------------
 
 
 def clamp(value, value_min, value_max):
@@ -151,7 +200,7 @@ class Mavic (Supervisor):
 
         # Turn the robot to the left or to the right according the value and the sign of angle_left
         yaw_disturbance = self.MAX_YAW_DISTURBANCE * angle_left / (2 * np.pi)
-        # non proportional and decreasing function
+        # non-proportional and decreasing function
         pitch_disturbance = clamp(
             np.log10(abs(angle_left)), self.MAX_PITCH_DISTURBANCE, 0.1)
 
@@ -162,7 +211,7 @@ class Mavic (Supervisor):
                 angle_left, distance_left))
         return yaw_disturbance, pitch_disturbance
             
-    # Heat coming from wounded people detection function
+    # Heat (wounded people) detection function
     def detect_heat(self, identified_ppl):
         red_obj = self.camera.getRecognitionObjects()
         # for x in red_obj:
@@ -185,6 +234,10 @@ class Mavic (Supervisor):
                                                                                                                     # for Pose-related nodes. Luckily it is:
                                                                                                                     # Pose --> Solid --> Robot
                     print(self.current_pose)
+
+                    # ---------- MQTT ----------
+
+                    #Preparing data to publish
                     drone_pos = {
                         "x": self.current_pose[3],
                         "y": self.current_pose[4],
@@ -193,6 +246,11 @@ class Mavic (Supervisor):
                         "x": person.getPosition()[0],
                         "y": person.getPosition()[1],
                         "z": person.getPosition()[2]}
+
+                    # Publishing wounded coord in MQTT
+                    publish_sensible_coordinates(str(self.my_def.upper()[-1]), str(z.getId()),
+                                                 str(heat_pos), str(timestamp))
+
                     detection_msg = {
                         "id_detection": str(z.getId()),
                         "id_drone": f"S_{self.my_def.upper()[-1]}",
@@ -201,6 +259,7 @@ class Mavic (Supervisor):
                         "time": timestamp
                     }
                     write_json(detection_msg, 'sensible_coord.json', 4)
+                    # -------------------------
 
         # if it is NOT the begin of the simulation and the past-detections array has some elements, we must first check if the real time camera-detected elements
         # haven't been already recognized and saved
@@ -216,23 +275,32 @@ class Mavic (Supervisor):
                     if (p.getId() == x.getId()):
                         #If the drone is recognizing an already detected person, set this var to True
                         already_found = True
+                # Preparing data to publish
+                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                drone_pos = {
+                    "x": self.current_pose[3],
+                    "y": self.current_pose[4],
+                    "z": self.current_pose[5]}
                 if(already_found == False):
                     # Saving the new detection
                     identified_ppl.append(x)
-                    timestamp= time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
                     print("------ "+ self.my_def.upper() +" HEAT DETECTION ------")
                     person = self.getFromId(x.getId())
                     print(self.my_def.upper() + " at position " + str(self.current_pose[3:]) + 
                     ", person found --> Id: " + str(x.getId()) + "; Coordinates: " + str(person.getPosition()))
                     print(self.current_pose)
-                    drone_pos = {
-                        "x": self.current_pose[3],
-                        "y": self.current_pose[4],
-                        "z": self.current_pose[5]}
+
+                    # ---------- MQTT ----------
+
+                    # Preparing data to publish
                     heat_pos = {
                         "x": person.getPosition()[0],
                         "y": person.getPosition()[1],
                         "z": person.getPosition()[2]}
+
+                    # Publishing wounded coord in MQTT
+                    publish_sensible_coordinates(str(self.my_def.upper()[-1]), str(x.getId()),
+                                                 str(heat_pos), str(timestamp))
                     detection_msg = {
                         "id_detection": str(x.getId()),
                         "id_drone": f"S_{self.my_def.upper()[-1]}",
@@ -242,6 +310,9 @@ class Mavic (Supervisor):
                     }
                     write_json(detection_msg, 'sensible_coord.json', 4)
                 else:
+                    # Publishing telemetry data in MQTT
+                    # publish_telemetry_data(str(self.my_def.upper()[-1]), drone_pos, str(timestamp))
+                    # -------------------------
                     pass       
 
 
@@ -374,7 +445,29 @@ class Mavic (Supervisor):
 # To use this controller, the basicTimeStep should be set to 8 and the defaultDamping
 # with a linear and angular damping both of 0.5
 robot = Mavic()
-    # 800, 600, 400
+
+#---------- MQTT communications section ----------
+
+user_id = "{0}".format(MqttConfigurationParameters.MQTT_USERNAME)
+message_limit = 10000
+
+mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+mqtt_client.on_connect = on_connect
+mqtt_client.username_pw_set(MqttConfigurationParameters.MQTT_USERNAME,
+    MqttConfigurationParameters.MQTT_PASSWORD)
+
+mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
+mqtt_client.loop_start()
+
+# Publishing drone id only once at the beginning of the simulation
+publish_device_info(str(robot.my_def))
+
+#------------------------------------------
+
+
+#---------- Webots world section ----------
+
+# real world alt. = 800, 600, 400
 # altitudes = [40, 30, 20]
 
             # 650, 450, 350
@@ -395,5 +488,7 @@ for s in waypoints_dict:
     else:
         pass
     robot.run()
+    # Stopping the client
+    mqtt_client.loop_stop()
 
 
