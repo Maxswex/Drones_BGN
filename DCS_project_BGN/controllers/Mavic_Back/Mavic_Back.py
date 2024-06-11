@@ -1,14 +1,54 @@
-from controller import Robot
+from mimetypes import init
+from controller import Supervisor
 import sys
+from pathlib import Path
+project_root = Path(__file__).resolve().parents[3]
+mqtt_parameters_path = project_root / 'mqtt_parameters.py'
+sys.path.append(str(project_root))
+from mqtt_parameters import MqttConfigurationParameters
+import paho.mqtt.client as mqtt
+import time
 try:
     import numpy as np
 except ImportError:
     sys.exit("Warning: 'numpy' module not found.")
 
+
+# ---------- MQTT communications methods ----------
+
+
+def on_connect(client, userdata, flags, rc):
+    print("Connected with result code " + str(rc))
+
+
+def publish_device_info(drone_id):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_INFO_TOPIC)
+    # Get only device info from the dictionary (e.g. the JSON)
+    mqtt_client.publish(target_topic, drone_id, 0, True)
+    print(f"Vehicle Info Published: Topic: {target_topic} Payload: {drone_id}")
+
+
+def publish_telemetry_data(drone_id, drone_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.DRONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
+    # Get only telemetry and timestamp from the dictionary (e.g. the JSON)
+    device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"Telemetry Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
+
+
+
 def clamp(value, value_min, value_max):
     return min(max(value, value_min), value_max)
 
-class Mavic(Robot):
+class Mavic(Supervisor):
     # Constants, empirically found.
     K_VERTICAL_THRUST = 68.5  # with this thrust, the drone lifts.
     K_VERTICAL_OFFSET = 0.6
@@ -21,7 +61,7 @@ class Mavic(Robot):
     target_precision = 0.5
 
     def __init__(self):
-        Robot.__init__(self)
+        Supervisor.__init__(self)
 
         self.time_step = int(self.getBasicTimeStep())
 
@@ -47,8 +87,14 @@ class Mavic(Robot):
             motor.setPosition(float('inf'))
             motor.setVelocity(1)
 
+        self.robot_node_myself = self.getSelf()
+        self.my_def = self.robot_node_myself.getDef()
+
         self.current_pose = 6 * [0]  # X, Y, Z, yaw, pitch, roll
-        self.target_position = [-45, -40, 32.5]
+        if str(self.my_def).strip().upper() == "B0":
+            self.target_position = [-45, -40, 32.5]
+        else:
+            self.target_position = [-55, 40, 32.5]
         self.target_altitude = 32.5
 
     def set_position(self, pos):
@@ -57,7 +103,16 @@ class Mavic(Robot):
     def move_to_target(self, verbose_movement=False, verbose_target=False):
         if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(self.target_position, self.current_pose[0:2])]):
             if verbose_target:
-                print("Target reached! Position: ", self.current_pose[0:2])
+                print(f"Target reached! Backbone drone: {str(self.my_def.upper())} at position: ", self.current_pose[0:2])
+                # ---------- MQTT ----------
+                drone_pos = {
+                    "x": self.current_pose[3],
+                    "y": self.current_pose[4],
+                    "z": self.current_pose[5]}
+                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                publish_telemetry_data(str(self.my_def.upper()), drone_pos, str(timestamp))
+
+
 
         self.target_position[2] = np.arctan2(self.target_position[1] - self.current_pose[1],
                                             self.target_position[0] - self.current_pose[0])
@@ -119,5 +174,24 @@ class Mavic(Robot):
 
 if __name__ == "__main__":
     robot = Mavic()
+
+    # ---------- MQTT communications section ----------
+
+    user_id = "{0}".format(MqttConfigurationParameters.MQTT_USERNAME)
+    message_limit = 10000
+
+    mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
+    mqtt_client.on_connect = on_connect
+    mqtt_client.username_pw_set(MqttConfigurationParameters.MQTT_USERNAME,
+                                MqttConfigurationParameters.MQTT_PASSWORD)
+
+    mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
+    mqtt_client.loop_start()
+
+    # Publishing drone id only once at the beginning of the simulation
+    publish_device_info(str(robot.my_def).strip().upper())
+
+    # ------------------------------------------
+
     robot.run()
 

@@ -19,7 +19,6 @@
 
 from mimetypes import init
 from controller import Supervisor
-from controller import Node
 from controller import CameraRecognitionObject
 import sys
 from pathlib import Path
@@ -227,38 +226,36 @@ class Mavic (Supervisor):
                 if n_of_colors == 1:
                     identified_ppl.append(z)
                     timestamp= time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
-                    print("------ "+ self.my_def.upper() +" HEAT DETECTION ------")
+                    print("------ "+ str(self.my_def).strip().upper() +" HEAT DETECTION ------")
                     person = self.getFromId(z.getId())
-                    print(self.my_def.upper() + " at position " + str(self.current_pose[3:]) + 
+                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
                         ", person found --> Id: " + str(z.getId()) + "; Coordinates: " + str(person.getPosition())) # this getPosition() method works only
                                                                                                                     # for Pose-related nodes. Luckily it is:
                                                                                                                     # Pose --> Solid --> Robot
-                    print(self.current_pose)
 
                     # ---------- MQTT ----------
 
-                    #Preparing data to publish
-                    drone_pos = {
-                        "x": self.current_pose[3],
-                        "y": self.current_pose[4],
-                        "z": self.current_pose[5]}
+                    # Preparing data to publish
                     heat_pos = {
                         "x": person.getPosition()[0],
                         "y": person.getPosition()[1],
                         "z": person.getPosition()[2]}
 
                     # Publishing wounded coord in MQTT
-                    publish_sensible_coordinates(str(self.my_def.upper()[-1]), str(z.getId()),
+                    publish_sensible_coordinates(str(self.my_def).strip().upper(), str(z.getId()),
                                                  str(heat_pos), str(timestamp))
 
+                    # Useless, needed before w/ JSON files
+                    """
                     detection_msg = {
-                        "id_detection": str(z.getId()),
-                        "id_drone": f"S_{self.my_def.upper()[-1]}",
+                        "id_detection": str(x.getId()),
+                        "id_drone": f"{self.my_def.upper()}",
                         "drone_position": drone_pos,
                         "heat_pos": heat_pos,
                         "time": timestamp
                     }
                     write_json(detection_msg, 'sensible_coord.json', 4)
+                    """
                     # -------------------------
 
         # if it is NOT the begin of the simulation and the past-detections array has some elements, we must first check if the real time camera-detected elements
@@ -284,11 +281,10 @@ class Mavic (Supervisor):
                 if(already_found == False):
                     # Saving the new detection
                     identified_ppl.append(x)
-                    print("------ "+ self.my_def.upper() +" HEAT DETECTION ------")
+                    print("------ "+ str(self.my_def).strip().upper() +" HEAT DETECTION ------")
                     person = self.getFromId(x.getId())
-                    print(self.my_def.upper() + " at position " + str(self.current_pose[3:]) + 
+                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
                     ", person found --> Id: " + str(x.getId()) + "; Coordinates: " + str(person.getPosition()))
-                    print(self.current_pose)
 
                     # ---------- MQTT ----------
 
@@ -299,20 +295,21 @@ class Mavic (Supervisor):
                         "z": person.getPosition()[2]}
 
                     # Publishing wounded coord in MQTT
-                    publish_sensible_coordinates(str(self.my_def.upper()[-1]), str(x.getId()),
+                    publish_sensible_coordinates(str(self.my_def).strip().upper(), str(x.getId()),
                                                  str(heat_pos), str(timestamp))
+
+                    # Useless, needed before w/ JSON files
+                    """
                     detection_msg = {
                         "id_detection": str(x.getId()),
-                        "id_drone": f"S_{self.my_def.upper()[-1]}",
+                        "id_drone": f"{self.my_def.upper()}",
                         "drone_position": drone_pos,
                         "heat_pos": heat_pos,
                         "time": timestamp
                     }
                     write_json(detection_msg, 'sensible_coord.json', 4)
+                    """
                 else:
-                    # Publishing telemetry data in MQTT
-                    # publish_telemetry_data(str(self.my_def.upper()[-1]), drone_pos, str(timestamp))
-                    # -------------------------
                     pass       
 
 
@@ -327,38 +324,38 @@ class Mavic (Supervisor):
         x_offset = -15
         y_offset = 0
 
-        if (self.my_def == "drone_0"):
-            waypoints_law = waypoints_dict[s]["drone_0"]
+        if (str(self.my_def).strip().upper() == "S0"):
+            waypoints_law = waypoints_dict[s]["S0"]
             x_offset = -16
             y_offset = 1
-            print("--- drone_0 waypoints ---")
+            print("--- drone S0 waypoints ---")
             for cord in waypoints_law:
                 cord[0] = cord[0] + x_offset
                 cord[1] = cord[1] + y_offset
             print(waypoints_law)
-        elif (self.my_def == "drone_1"):
+        elif (str(self.my_def).strip().upper() == "S1"):
             x_offset = -16
             y_offset = -1
-            waypoints_law = waypoints_dict[s]["drone_1"]
-            print("--- drone_1 waypoints ---")
+            waypoints_law = waypoints_dict[s]["S1"]
+            print("--- drone S1 waypoints ---")
             for cord in waypoints_law:
                 cord[0] = cord[0] + x_offset
                 cord[1] = cord[1] + y_offset
             print(waypoints_law)
-        elif (self.my_def == "drone_2"):
+        elif (str(self.my_def).strip().upper() == "S2"):
             x_offset = -14
             y_offset = 1
-            waypoints_law = waypoints_dict[s]["drone_2"]
-            print("--- drone_2 waypoints ---")
+            waypoints_law = waypoints_dict[s]["S2"]
+            print("--- drone S2 waypoints ---")
             for cord in waypoints_law:
                 cord[0] = cord[0] + x_offset
                 cord[1] = cord[1] + y_offset
             print(waypoints_law)
-        elif (self.my_def == "drone_3"):
+        elif (str(self.my_def).strip().upper() == "S3"):
             x_offset = -14
             y_offset = -1
-            waypoints_law = waypoints_dict[s]["drone_3"]
-            print("--- drone_3 waypoints ---")
+            waypoints_law = waypoints_dict[s]["S3"]
+            print("--- drone S3 waypoints ---")
             for cord in waypoints_law:
                 cord[0] = cord[0] + x_offset
                 cord[1] = cord[1] + y_offset
@@ -387,15 +384,15 @@ class Mavic (Supervisor):
                 # Then it is checked at each time step if it has reached the waypoint: if it has it, rendevousz completed and set the state to "0"
                 # (if this wass not done before); otherwise the drone will keep travel to the waypoint.
                 if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(rend_waypoint, self.current_pose[0:2])]):
-                    if self.my_def == "drone_0":
+                    if str(self.my_def).strip().upper() == "S0":
                         if rend_states["rend_states"][0] != 0:
                             rend_states["rend_states"][0] = 0
                             write_json(rend_states, 'rend_states.json', 0)
-                    elif self.my_def == "drone_1":
+                    elif str(self.my_def).strip().upper() == "S1":
                         if rend_states["rend_states"][1] != 0:
                             rend_states["rend_states"][1] = 0
                         write_json(rend_states, 'rend_states.json', 0)
-                    elif self.my_def == "drone_2":
+                    elif str(self.my_def).strip().upper() == "S2":
                         if rend_states["rend_states"][2] != 0:
                             rend_states["rend_states"][2] = 0
                             write_json(rend_states, 'rend_states.json', 0)
@@ -460,7 +457,7 @@ mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfiguratio
 mqtt_client.loop_start()
 
 # Publishing drone id only once at the beginning of the simulation
-publish_device_info(str(robot.my_def))
+publish_device_info(str(robot.my_def).strip().upper())
 
 #------------------------------------------
 
@@ -477,13 +474,13 @@ identified_ppl = []
 max_alt = altitudes[0]
 for s in waypoints_dict:
     if (s.lower() == "high"):
-        print(robot.my_def + " flying in high setup")
+        print(str(robot.my_def).strip().upper() + " flying in high setup")
         alt_meters = altitudes[0]
     elif (s.lower() == "medium"):
-        print(robot.my_def + " flying in medium setup")
+        print(str(robot.my_def).strip().upper() + " flying in medium setup")
         alt_meters = altitudes[1]
     elif (s.lower() == "low"):
-        print(robot.my_def + " flying in low setup")
+        print(str(robot.my_def).strip().upper() + " flying in low setup")
         alt_meters = altitudes[2]
     else:
         pass

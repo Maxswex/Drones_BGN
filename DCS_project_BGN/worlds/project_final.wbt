@@ -494,7 +494,7 @@ DEF area_3 Solid {
     1 0 0
   ]
 }
-DEF drone_0 Mavic2Pro {
+DEF S0 Mavic2Pro {
   translation -1 1 0.2
   rotation -0.0025788273158103133 0.0006741532071376972 0.9999964475772544 3.1292114969303197
   controller "mavic2pro_LawRend_st"
@@ -512,11 +512,11 @@ DEF drone_0 Mavic2Pro {
     }
   ]
 }
-DEF Mavic_Back_0 Mavic2Pro {
+DEF B0 Mavic2Pro {
   translation -50 -50 0.277885
   rotation -0.0025788273158103133 0.0006741532071376972 0.9999964475772544 3.1292114969303197
   name "Mavic 2 PRO(4)"
-  controller "Mavic_Back_0"
+  controller "Mavic_Back"
   supervisor TRUE
   cameraSlot [
     Camera {
@@ -531,11 +531,11 @@ DEF Mavic_Back_0 Mavic2Pro {
     }
   ]
 }
-DEF Mav_Back_1 Mavic2Pro {
+DEF B1 Mavic2Pro {
   translation -49.9 50 0.377885
   rotation -0.0025788273158103133 0.0006741532071376972 0.9999964475772544 3.1292114969303197
   name "Mavic 2 PRO(5)"
-  controller "Mavic_Back_1"
+  controller "Mavic_Back"
   supervisor TRUE
   cameraSlot [
     Camera {
@@ -550,7 +550,7 @@ DEF Mav_Back_1 Mavic2Pro {
     }
   ]
 }
-DEF drone_1 Mavic2Pro {
+DEF S1 Mavic2Pro {
   translation -1 -1 0.2
   rotation -0.0025788240053189896 0.0006741541536786461 0.9999964475851536 3.129211497090021
   name "Mavic 2 PRO(1)"
@@ -569,7 +569,7 @@ DEF drone_1 Mavic2Pro {
     }
   ]
 }
-DEF drone_2 Mavic2Pro {
+DEF S2 Mavic2Pro {
   translation 1 1 0.2
   rotation -0.0025788249740054878 0.000674165676538194 0.9999964475748871 3.1292114989324196
   name "Mavic 2 PRO(2)"
@@ -588,7 +588,7 @@ DEF drone_2 Mavic2Pro {
     }
   ]
 }
-DEF drone_3 Mavic2Pro {
+DEF S3 Mavic2Pro {
   translation 1 -1 0.2
   rotation -0.0025788349435744012 0.000674160399048981 0.999996447552735 3.129211498063122
   name "Mavic 2 PRO(3)"
