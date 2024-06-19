@@ -24,7 +24,7 @@ def on_connect(client, userdata, flags, rc):
 def publish_device_info(drone_id):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_INFO_TOPIC)
     # Get only device info from the dictionary (e.g. the JSON)
@@ -35,7 +35,7 @@ def publish_device_info(drone_id):
 def publish_telemetry_data(drone_id, drone_pos, timestamp):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
     # Get only telemetry and timestamp from the dictionary (e.g. the JSON)
@@ -104,13 +104,6 @@ class Mavic(Supervisor):
         if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(self.target_position, self.current_pose[0:2])]):
             if verbose_target:
                 print(f"Target reached! Backbone drone: {str(self.my_def.upper())} at position: ", self.current_pose[0:2])
-                # ---------- MQTT ----------
-                drone_pos = {
-                    "x": self.current_pose[3],
-                    "y": self.current_pose[4],
-                    "z": self.current_pose[5]}
-                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
-                publish_telemetry_data(str(self.my_def.upper()), drone_pos, str(timestamp))
 
 
 
@@ -134,6 +127,7 @@ class Mavic(Supervisor):
         return yaw_disturbance, pitch_disturbance
 
     def run(self):
+        count = 0
         t1 = self.getTime()
 
         roll_disturbance = 0
@@ -141,12 +135,18 @@ class Mavic(Supervisor):
         yaw_disturbance = 0
 
         while self.step(self.time_step) != -1:
-
+            count += 1
             # Read sensors
             roll, pitch, yaw = self.imu.getRollPitchYaw()
             x_pos, y_pos, altitude = self.gps.getValues()
             roll_acceleration, pitch_acceleration, _ = self.gyro.getValues()
             self.set_position([x_pos, y_pos, altitude, yaw, pitch, roll])
+
+            # Publish telemetry data once in a while
+            # ---------- MQTT ----------
+            if count % 500 == 0:
+                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
 
             if altitude > self.target_altitude - 1:
                 # as soon as it reaches the target altitude, compute disturbances to go to the given waypoints.

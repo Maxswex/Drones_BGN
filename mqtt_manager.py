@@ -2,17 +2,10 @@ import paho.mqtt.client as mqtt
 from mqtt_parameters import MqttConfigurationParameters
 
 def on_connect(client, userdata, flags, rc):
-    device_info_topic = "{0}/{1}/+/{2}".format(
-        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.BACKBONE_TOPIC,
-        MqttConfigurationParameters.DRONE_INFO_TOPIC)
-    mqtt_client.subscribe(device_info_topic)
 
-    print("Subscribed to: " + device_info_topic)
-
-    device_telemetry_topic = "{0}/{1}/+/{2}".format(
+    # Subscribe to tleemtry topics, both for scanning and for backbone functionalities
+    device_telemetry_topic = "{0}/+/+/{1}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.BACKBONE_TOPIC,
         MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
     mqtt_client.subscribe(device_telemetry_topic)
 

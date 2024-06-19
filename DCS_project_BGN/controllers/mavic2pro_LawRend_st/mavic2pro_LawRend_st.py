@@ -44,20 +44,20 @@ def on_connect(client, userdata, flags, rc):
 def publish_device_info(drone_id):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
+        MqttConfigurationParameters.SCANNING_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_INFO_TOPIC)
-    # Get only device info from the dictionary (e.g. the JSON)
+    # Get only device info
     mqtt_client.publish(target_topic, drone_id, 0, True)
     print(f"Vehicle Info Published: Topic: {target_topic} Payload: {drone_id}")
 
 def publish_telemetry_data(drone_id, drone_pos, timestamp):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
+        MqttConfigurationParameters.SCANNING_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
-    # Get only telemetry and timestamp from the dictionary (e.g. the JSON)
+    # Get only telemetry and timestamp
     device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
     mqtt_client.publish(target_topic, device_payload_string, 0, False)
     print(f"Telemetry Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
@@ -66,10 +66,10 @@ def publish_telemetry_data(drone_id, drone_pos, timestamp):
 def publish_sensible_coordinates(drone_id, detection_id,  heat_pos, timestamp):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
+        MqttConfigurationParameters.SCANNING_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
-    # Get id detection, heat position and timestamp from the dictionary (e.g. the JSON)
+    # Get id detection, heat position and timestamp
     device_payload_string = f"heat detection id: {detection_id}, heat position: {heat_pos}, time: {timestamp}"
     mqtt_client.publish(target_topic, device_payload_string, 0, False)
     print(f"FOUND A SENSIBLE COORDINATES!! Published to the following topic: {target_topic} \nPayload: {device_payload_string}")
@@ -211,7 +211,7 @@ class Mavic (Supervisor):
         return yaw_disturbance, pitch_disturbance
             
     # Heat (wounded people) detection function
-    def detect_heat(self, identified_ppl):
+    def detect_heat(self, identified_ppl, count):
         red_obj = self.camera.getRecognitionObjects()
         # for x in red_obj:
         #         print(type(x))
@@ -244,21 +244,9 @@ class Mavic (Supervisor):
                     # Publishing wounded coord in MQTT
                     publish_sensible_coordinates(str(self.my_def).strip().upper(), str(z.getId()),
                                                  str(heat_pos), str(timestamp))
-
-                    # Useless, needed before w/ JSON files
-                    """
-                    detection_msg = {
-                        "id_detection": str(x.getId()),
-                        "id_drone": f"{self.my_def.upper()}",
-                        "drone_position": drone_pos,
-                        "heat_pos": heat_pos,
-                        "time": timestamp
-                    }
-                    write_json(detection_msg, 'sensible_coord.json', 4)
-                    """
                     # -------------------------
 
-        # if it is NOT the begin of the simulation and the past-detections array has some elements, we must first check if the real time camera-detected elements
+        # if it is NOT the beginning of the simulation and the past-detections array has some elements, we must first check if the real time camera-detected elements
         # haven't been already recognized and saved
         elif len(identified_ppl) != 0:
             # Passing through all the elements that the drone camera recognize
@@ -298,22 +286,14 @@ class Mavic (Supervisor):
                     publish_sensible_coordinates(str(self.my_def).strip().upper(), str(x.getId()),
                                                  str(heat_pos), str(timestamp))
 
-                    # Useless, needed before w/ JSON files
-                    """
-                    detection_msg = {
-                        "id_detection": str(x.getId()),
-                        "id_drone": f"{self.my_def.upper()}",
-                        "drone_position": drone_pos,
-                        "heat_pos": heat_pos,
-                        "time": timestamp
-                    }
-                    write_json(detection_msg, 'sensible_coord.json', 4)
-                    """
                 else:
+                    #if count%100 == 0:
+                    #   publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
                     pass       
 
 
     def run(self):
+        count = 0
         t1 = self.getTime()
         self.target_altitude = alt_meters
         rend_waypoint = [0, 0, 0]
@@ -364,6 +344,7 @@ class Mavic (Supervisor):
             pass
 
         while self.step(self.time_step) != -1:
+            count += 1
             # get the initial coord of the drone and prepare the rendezvous JSON
             if rend_waypoint == [0, 0, 0]:
                 rend_waypoint = self.gps.getValues()
@@ -410,6 +391,12 @@ class Mavic (Supervisor):
             x_pos, y_pos, altitude = self.gps.getValues()
             roll_acceleration, pitch_acceleration, _ = self.gyro.getValues()
             self.set_position([x_pos, y_pos, altitude, roll, pitch, yaw])
+
+            # Publish telemetry data once in a while
+            # ---------- MQTT ----------
+            if count % 500 == 0:
+                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
             
             if altitude > self.target_altitude - 1:
                 # as soon as it reach the target altitude, compute the disturbances to go to the given waypoints.
@@ -419,7 +406,7 @@ class Mavic (Supervisor):
                     t1 = self.getTime()
 
             # Find people (represented by the red blocks) in the camera image
-            self.detect_heat(identified_ppl)
+            self.detect_heat(identified_ppl, count)
 
             
             roll_input = self.K_ROLL_P * clamp(roll, -1, 1) + roll_acceleration + roll_disturbance

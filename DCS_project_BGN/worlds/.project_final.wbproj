@@ -9,8 +9,8 @@ orthographicViewHeight: 1
 textFiles: 0 "C:/Python38/lib/site-packages/paho/mqtt/client.py"
 consoles: Console:All:All
 renderingDevicePerspectives: Mavic 2 PRO(1):camera;1;0.4775;0.00121515;0
-renderingDevicePerspectives: Mavic 2 PRO(2):camera;1;0.264647;0.859559;0.830792
-renderingDevicePerspectives: Mavic 2 PRO(3):camera;1;0.292474;0;0.832885
+renderingDevicePerspectives: Mavic 2 PRO(2):camera;1;0.285824;0.848529;0.817595
+renderingDevicePerspectives: Mavic 2 PRO(3):camera;1;0.340582;0;0.806158
 renderingDevicePerspectives: Mavic 2 PRO(4):camera;0;0.195;0;0
 renderingDevicePerspectives: Mavic 2 PRO(5):camera;0;0.133333;0.308333;0.133034
-renderingDevicePerspectives: Mavic 2 PRO:camera;1;0.215235;0.885294;0
+renderingDevicePerspectives: Mavic 2 PRO:camera;1;0.294294;0.844118;0
