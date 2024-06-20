@@ -10,21 +10,14 @@ def on_connect(client, userdata, flags, rc):
 
     print("Subscribed to: " + device_info_topic)
 
-    """device_telemetry_topic = "{0}/{1}/+/{2}".format(
-        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
-        MqttConfigurationParameters.DRONE_TOPIC,
-        MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
-    mqtt_client.subscribe(device_telemetry_topic)
-
-    print("Subscribed to: " + device_telemetry_topic)"""
-
     device_sensible_coordinates_topic = "{0}/{1}/+/{2}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
         MqttConfigurationParameters.SCANNING_TOPIC,
         MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
     mqtt_client.subscribe(device_sensible_coordinates_topic)
 
-    print(f"Subscribed to: {device_sensible_coordinates_topic}\n\n")
+    print(f"Subscribed to: {device_sensible_coordinates_topic}")
+
 def on_message(client, userdata, message):
     message_payload = str(message.payload.decode("utf-8"))
     print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")

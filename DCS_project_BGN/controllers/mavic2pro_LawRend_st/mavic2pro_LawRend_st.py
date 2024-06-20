@@ -62,6 +62,17 @@ def publish_telemetry_data(drone_id, drone_pos, timestamp):
     mqtt_client.publish(target_topic, device_payload_string, 0, False)
     print(f"Telemetry Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
 
+def wp_reached(drone_id, drone_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.SCANNING_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_WAYPOINT_REACHED_TOPIC)
+    # Get only telemetry and timestamp
+    device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"Waypoint Reached: Topic: {target_topic} \nPayload: {device_payload_string}\n")
+
 
 def publish_sensible_coordinates(drone_id, detection_id,  heat_pos, timestamp):
     target_topic = "{0}/{1}/{2}/{3}".format(
@@ -71,7 +82,7 @@ def publish_sensible_coordinates(drone_id, detection_id,  heat_pos, timestamp):
         MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
     # Get id detection, heat position and timestamp
     device_payload_string = f"heat detection id: {detection_id}, heat position: {heat_pos}, time: {timestamp}"
-    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    mqtt_client.publish(target_topic, device_payload_string, 0, True)
     print(f"FOUND A SENSIBLE COORDINATES!! Published to the following topic: {target_topic} \nPayload: {device_payload_string}")
 
 
@@ -177,7 +188,12 @@ class Mavic (Supervisor):
 
         # if the robot is at the position with a precision of target_precision
         if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(self.target_position, self.current_pose[0:2])]):
-                  
+            print("Waypoint reached, drone " + str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
+                  "; heading to next waypoint\n")
+            # --------------- MQTT -----------------
+            timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
+            wp_reached(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
+
 
             self.target_index += 1
             if self.target_index > len(waypoints) - 1:
@@ -261,7 +277,7 @@ class Mavic (Supervisor):
                         #If the drone is recognizing an already detected person, set this var to True
                         already_found = True
                 # Preparing data to publish
-                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
                 drone_pos = {
                     "x": self.current_pose[3],
                     "y": self.current_pose[4],
@@ -272,7 +288,7 @@ class Mavic (Supervisor):
                     print("------ "+ str(self.my_def).strip().upper() +" HEAT DETECTION ------")
                     person = self.getFromId(x.getId())
                     print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
-                    ", person found --> Id: " + str(x.getId()) + "; Coordinates: " + str(person.getPosition()))
+                    ", person found --> Id: " + str(x.getId()) + "; Coordinates: " + str(person.getPosition()) + "\n")
 
                     # ---------- MQTT ----------
 
@@ -395,7 +411,7 @@ class Mavic (Supervisor):
             # Publish telemetry data once in a while
             # ---------- MQTT ----------
             if count % 500 == 0:
-                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
                 publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
             
             if altitude > self.target_altitude - 1:

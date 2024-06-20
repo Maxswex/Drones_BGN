@@ -27,7 +27,7 @@ def publish_device_info(drone_id):
         MqttConfigurationParameters.BACKBONE_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_INFO_TOPIC)
-    # Get only device info from the dictionary (e.g. the JSON)
+    # Get only device info
     mqtt_client.publish(target_topic, drone_id, 0, True)
     print(f"Vehicle Info Published: Topic: {target_topic} Payload: {drone_id}")
 
@@ -38,10 +38,32 @@ def publish_telemetry_data(drone_id, drone_pos, timestamp):
         MqttConfigurationParameters.BACKBONE_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_TELEMETRY_TOPIC)
-    # Get only telemetry and timestamp from the dictionary (e.g. the JSON)
+    # Get only telemetry and timestamp
     device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
     mqtt_client.publish(target_topic, device_payload_string, 0, False)
     print(f"Telemetry Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
+
+def wp_reached(drone_id, drone_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_WAYPOINT_REACHED_TOPIC)
+    # Get only telemetry and timestamp
+    device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"Waypoint Reached: Topic: {target_topic} \nPayload: {device_payload_string}\n")
+
+def status(drone_id, drone_pos, timestamp):
+    target_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
+        drone_id,
+        MqttConfigurationParameters.DRONE_STATUS_TOPIC)
+    # Get only telemetry and status
+    device_payload_string = f"drone position: {drone_pos}, time: {timestamp}"
+    mqtt_client.publish(target_topic, device_payload_string, 0, False)
+    print(f"Backbone Drone {drone_id} Status Data Published: Topic: {target_topic} \nPayload: {device_payload_string}\n")
 
 
 
@@ -102,8 +124,19 @@ class Mavic(Supervisor):
 
     def move_to_target(self, verbose_movement=False, verbose_target=False):
         if all([abs(x1 - x2) < self.target_precision for (x1, x2) in zip(self.target_position, self.current_pose[0:2])]):
+            # if the message about the reaching of the target has already been published, do not publish it again,
+            # since it is fixed for the backbone drones
+            global msg_wp_reached
+            if msg_wp_reached:
+                pass
+            else:
+                # ---------- MQTT ----------
+                timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
+                wp_reached(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
+                msg_wp_reached = True
             if verbose_target:
                 print(f"Target reached! Backbone drone: {str(self.my_def.upper())} at position: ", self.current_pose[0:2])
+
 
 
 
@@ -145,7 +178,7 @@ class Mavic(Supervisor):
             # Publish telemetry data once in a while
             # ---------- MQTT ----------
             if count % 500 == 0:
-                timestamp = time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
+                timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
                 publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
 
             if altitude > self.target_altitude - 1:
@@ -174,6 +207,7 @@ class Mavic(Supervisor):
 
 if __name__ == "__main__":
     robot = Mavic()
+    msg_wp_reached = False
 
     # ---------- MQTT communications section ----------
 

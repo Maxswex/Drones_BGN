@@ -11,6 +11,15 @@ def on_connect(client, userdata, flags, rc):
 
     print("Subscribed to: " + device_telemetry_topic)
 
+    # Subscribe to wp_reached topic only for scanning drones: rescue_op must concern only about helping and rescuing civilians
+    device_wp_reached_topic = "{0}/{1}/+/{2}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.SCANNING_TOPIC,
+        MqttConfigurationParameters.DRONE_WAYPOINT_REACHED_TOPIC)
+    mqtt_client.subscribe(device_wp_reached_topic)
+
+    print("Subscribed to: " + device_wp_reached_topic)
+
 def on_message(client, userdata, message):
     message_payload = str(message.payload.decode("utf-8"))
     print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")

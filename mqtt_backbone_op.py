@@ -18,6 +18,22 @@ def on_connect(client, userdata, flags, rc):
 
     print("Subscribed to: " + device_telemetry_topic)
 
+    device_wp_reached_topic = "{0}/{1}/+/{2}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
+        MqttConfigurationParameters.DRONE_WAYPOINT_REACHED_TOPIC)
+    mqtt_client.subscribe(device_wp_reached_topic)
+
+    print("Subscribed to: " + device_wp_reached_topic)
+
+    device_status_topic = "{0}/{1}/+/{2}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
+        MqttConfigurationParameters.DRONE_STATUS_TOPIC)
+    mqtt_client.subscribe(device_telemetry_topic)
+
+    print("Subscribed to: " + device_status_topic)
+
 def on_message(client, userdata, message):
     message_payload = str(message.payload.decode("utf-8"))
     print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")
