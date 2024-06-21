@@ -185,16 +185,11 @@ class Mavic(Supervisor):
         count = 0
         t1 = self.getTime()
 
-        print("DEBUGGING ON TARGET POSITION \n")
-        print(self.target_position)
-
         roll_disturbance = 0
         pitch_disturbance = 0
         yaw_disturbance = 0
 
         while self.step(self.time_step) != -1:
-            print("DEBUGGING ON TARGET POSITION \n")
-            print(self.target_position)
             count += 1
             # Read sensors
             roll, pitch, yaw = self.imu.getRollPitchYaw()
