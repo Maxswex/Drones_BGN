@@ -1,5 +1,6 @@
 import paho.mqtt.client as mqtt
 from mqtt_parameters import MqttConfigurationParameters
+import json
 
 def on_connect(client, userdata, flags, rc):
     device_info_topic = "{0}/{1}/+/{2}".format(

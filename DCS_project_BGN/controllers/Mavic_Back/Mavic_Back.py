@@ -1,4 +1,5 @@
 from mimetypes import init
+import json
 from controller import Supervisor
 import sys
 from pathlib import Path
@@ -19,6 +20,26 @@ except ImportError:
 
 def on_connect(client, userdata, flags, rc):
     print("Connected with result code " + str(rc))
+
+    # Subscribe to start topics
+    device_start_topic = "{0}/{1}/{2}/{3}".format(
+        MqttConfigurationParameters.MQTT_BASIC_TOPIC,
+        MqttConfigurationParameters.BACKBONE_TOPIC,
+        robot.my_def,
+        MqttConfigurationParameters.DRONE_START_TOPIC)
+    mqtt_client.subscribe(device_start_topic)
+
+    print("Subscribed to: " + device_start_topic)
+
+def on_message(client, userdata, message):
+    try:
+        # Decodifica del payload JSON
+        message_payload = json.loads(message.payload.decode('utf-8'))
+        print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")
+        if "target_pos" in message_payload:
+            robot.target_position = message_payload["target_pos"]
+    except json.JSONDecodeError as e:
+        print(f"Errore di decodifica JSON: {e}")
 
 
 def publish_device_info(drone_id):
@@ -113,10 +134,11 @@ class Mavic(Supervisor):
         self.my_def = self.robot_node_myself.getDef()
 
         self.current_pose = 6 * [0]  # X, Y, Z, yaw, pitch, roll
-        if str(self.my_def).strip().upper() == "B0":
+        '''if str(self.my_def).strip().upper() == "B0":
             self.target_position = [-45, -40, 32.5]
         else:
-            self.target_position = [-55, 40, 32.5]
+            self.target_position = [-55, 40, 32.5]'''
+        self.target_position = [0, 0, 0]
         self.target_altitude = 32.5
 
     def set_position(self, pos):
@@ -163,11 +185,16 @@ class Mavic(Supervisor):
         count = 0
         t1 = self.getTime()
 
+        print("DEBUGGING ON TARGET POSITION \n")
+        print(self.target_position)
+
         roll_disturbance = 0
         pitch_disturbance = 0
         yaw_disturbance = 0
 
         while self.step(self.time_step) != -1:
+            print("DEBUGGING ON TARGET POSITION \n")
+            print(self.target_position)
             count += 1
             # Read sensors
             roll, pitch, yaw = self.imu.getRollPitchYaw()
@@ -216,11 +243,13 @@ if __name__ == "__main__":
 
     mqtt_client = mqtt.Client(mqtt.CallbackAPIVersion.VERSION1)
     mqtt_client.on_connect = on_connect
+    mqtt_client.on_message = on_message
     mqtt_client.username_pw_set(MqttConfigurationParameters.MQTT_USERNAME,
                                 MqttConfigurationParameters.MQTT_PASSWORD)
 
     mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
     mqtt_client.loop_start()
+
 
     # Publishing drone id only once at the beginning of the simulation
     publish_device_info(str(robot.my_def).strip().upper())
