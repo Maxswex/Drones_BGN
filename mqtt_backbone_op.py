@@ -2,6 +2,14 @@ import paho.mqtt.client as mqtt
 from mqtt_parameters import MqttConfigurationParameters
 import json
 
+class IoTMessage:
+    def __init__(self, topic, payload):
+        self.topic = topic
+        self.payload = payload
+
+    def to_json(self):
+        return json.dumps(self, default=lambda o: o.__dict__, indent=4)
+
 def on_connect(client, userdata, flags, rc):
     device_info_topic = "{0}/{1}/+/{2}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
@@ -37,8 +45,8 @@ def on_connect(client, userdata, flags, rc):
 
 def on_message(client, userdata, message):
     message_payload = str(message.payload.decode("utf-8"))
-    print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")
-
+    iot_message = IoTMessage(message.topic, message_payload)
+    print(f"Received IoT Message: {iot_message.to_json()}")
 
 
 vehicle_id = "Consumer: {0}".format(MqttConfigurationParameters.MQTT_USERNAME)

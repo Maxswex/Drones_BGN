@@ -2,6 +2,7 @@ import paho.mqtt.client as mqtt
 from mqtt_parameters import MqttConfigurationParameters
 import json
 
+
 class IoTMessage:
     def __init__(self, topic, payload):
         self.topic = topic
