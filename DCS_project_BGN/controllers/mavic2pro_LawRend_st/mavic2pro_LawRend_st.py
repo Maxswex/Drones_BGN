@@ -244,7 +244,7 @@ class Mavic (Supervisor):
                     timestamp= time.strftime('%Y-%M-%DT%H:%M:%S', time.localtime())
                     print("------ "+ str(self.my_def).strip().upper() +" HEAT DETECTION ------")
                     person = self.getFromId(z.getId())
-                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
+                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[:3]) +
                         ", person found --> Id: " + str(z.getId()) + "; Coordinates: " + str(person.getPosition())) # this getPosition() method works only
                                                                                                                     # for Pose-related nodes. Luckily it is:
                                                                                                                     # Pose --> Solid --> Robot
@@ -279,15 +279,15 @@ class Mavic (Supervisor):
                 # Preparing data to publish
                 timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
                 drone_pos = {
-                    "x": self.current_pose[3],
-                    "y": self.current_pose[4],
-                    "z": self.current_pose[5]}
+                    "x": self.current_pose[0],
+                    "y": self.current_pose[1],
+                    "z": self.current_pose[2]}
                 if(already_found == False):
                     # Saving the new detection
                     identified_ppl.append(x)
                     print("------ "+ str(self.my_def).strip().upper() +" HEAT DETECTION ------")
                     person = self.getFromId(x.getId())
-                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[3:]) +
+                    print(str(self.my_def).strip().upper() + " at position " + str(self.current_pose[:3]) +
                     ", person found --> Id: " + str(x.getId()) + "; Coordinates: " + str(person.getPosition()) + "\n")
 
                     # ---------- MQTT ----------
@@ -407,12 +407,17 @@ class Mavic (Supervisor):
             x_pos, y_pos, altitude = self.gps.getValues()
             roll_acceleration, pitch_acceleration, _ = self.gyro.getValues()
             self.set_position([x_pos, y_pos, altitude, roll, pitch, yaw])
+            
+            #print(f"Current GPS values: x={x_pos}, y={y_pos}, altitude={altitude}")
+            #print(f"Current position: {self.current_pose}")
+
+            
 
             # Publish telemetry data once in a while
             # ---------- MQTT ----------
             if count % 500 == 0:
                 timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
-                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
+                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[:3], str(timestamp))
             
             if altitude > self.target_altitude - 1:
                 # as soon as it reach the target altitude, compute the disturbances to go to the given waypoints.

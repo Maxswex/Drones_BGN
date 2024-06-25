@@ -154,7 +154,7 @@ class Mavic(Supervisor):
             else:
                 # ---------- MQTT ----------
                 timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
-                wp_reached(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
+                wp_reached(str(self.my_def).strip().upper(), self.current_pose[:3], str(timestamp))
                 msg_wp_reached = True
             if verbose_target:
                 print(f"Target reached! Backbone drone: {str(self.my_def.upper())} at position: ", self.current_pose[0:2])
@@ -201,7 +201,7 @@ class Mavic(Supervisor):
             # ---------- MQTT ----------
             if count % 500 == 0:
                 timestamp = time.strftime('%Y-%M-%D T%H:%M:%S', time.localtime())
-                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[3:], str(timestamp))
+                publish_telemetry_data(str(self.my_def).strip().upper(), self.current_pose[:3], str(timestamp))
 
             if altitude > self.target_altitude - 1:
                 # as soon as it reaches the target altitude, compute disturbances to go to the given waypoints.
