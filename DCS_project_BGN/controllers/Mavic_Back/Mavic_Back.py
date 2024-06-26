@@ -9,6 +9,7 @@ sys.path.append(str(project_root))
 from mqtt_parameters import MqttConfigurationParameters
 import paho.mqtt.client as mqtt
 import time
+import random
 try:
     import numpy as np
 except ImportError:
@@ -36,21 +37,32 @@ def on_message(client, userdata, message):
         # Decodifica del payload JSON
         message_payload = json.loads(message.payload.decode('utf-8'))
         print(f"Received IoT Message: Topic: {message.topic}) #Payload: {message_payload}")
+        print(f"Retained message: {message.retain}")
         if "target_pos" in message_payload:
             robot.target_position = message_payload["target_pos"]
     except json.JSONDecodeError as e:
         print(f"Errore di decodifica JSON: {e}")
 
 
-def publish_device_info(drone_id):
+def publish_device_info(drone_id, model, battery=None):
     target_topic = "{0}/{1}/{2}/{3}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
         MqttConfigurationParameters.BACKBONE_TOPIC,
         drone_id,
         MqttConfigurationParameters.DRONE_INFO_TOPIC)
-    # Get only device info
-    mqtt_client.publish(target_topic, drone_id, 0, True)
-    print(f"Vehicle Info Published: Topic: {target_topic} Payload: {drone_id}")
+
+    if battery is None:
+        battery = random.randint(20, 98)
+
+    payload = {
+        "drone_id": drone_id,
+        "model": model,
+        "battery": f"{battery}%"
+    }
+
+    payload_json = json.dumps(payload)
+    mqtt_client.publish(target_topic, payload_json, qos=1, retain=True)
+    print(f"Vehicle Info Published: Topic: {target_topic} Payload: {payload_json} (Retained)")
 
 
 def publish_telemetry_data(drone_id, drone_pos, timestamp):
@@ -244,11 +256,12 @@ if __name__ == "__main__":
 
     mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
     mqtt_client.loop_start()
+  
 
 
     # Publishing drone id only once at the beginning of the simulation
-    publish_device_info(str(robot.my_def).strip().upper())
-
+    publish_device_info(str(robot.my_def).strip().upper(), "DJI_mavic_HE")
+    
     # ------------------------------------------
 
     robot.run()

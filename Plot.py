@@ -45,7 +45,7 @@ def animate(i, drone_data):
         ax.plot(xs, ys, label=f'Drone {drone_id}', color=data["color"], marker='o', linestyle='-', linewidth=2, markersize=1)
 
         # Set limits to view values between -100 and 100
-        ax.set_xlim([-100, 100])
+        ax.set_xlim([-100, 10])
         ax.set_ylim([-100, 100])
         ax.set_title(f'Drone {drone_id}', color= data["color"], fontweight = 'bold')
         ax.set_xlabel('X Coordinate')

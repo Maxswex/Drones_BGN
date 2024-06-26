@@ -7,6 +7,7 @@ class IoTMessage:
         self.topic = topic
         self.payload = payload
 
+
     def to_json(self):
         return json.dumps(self, default=lambda o: o.__dict__, indent=4)
 
@@ -19,13 +20,12 @@ def remove_time_from_payload(payload):
     except json.JSONDecodeError:        #errors management
         return payload
 
-
 def on_connect(client, userdata, flags, rc):
     device_info_topic = "{0}/{1}/+/{2}".format(
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
         MqttConfigurationParameters.SCANNING_TOPIC,
         MqttConfigurationParameters.DRONE_INFO_TOPIC)
-    mqtt_client.subscribe(device_info_topic)
+    mqtt_client1.subscribe(device_info_topic)
 
     print("Subscribed to: " + device_info_topic)
 
@@ -33,7 +33,7 @@ def on_connect(client, userdata, flags, rc):
         MqttConfigurationParameters.MQTT_BASIC_TOPIC,
         MqttConfigurationParameters.SCANNING_TOPIC,
         MqttConfigurationParameters.DRONE_SENSIBLE_COORDINATES_TOPIC)
-    mqtt_client.subscribe(device_sensible_coordinates_topic)
+    mqtt_client1.subscribe(device_sensible_coordinates_topic)
 
     print(f"Subscribed to: {device_sensible_coordinates_topic}")
 
@@ -49,13 +49,14 @@ def on_message(client, userdata, message):
         print(f"Received IoT Message: {iot_message.to_json()}")
         last_messages[message.topic] = clean_payload
 
+
 vehicle_id = "Consumer: {0}".format(MqttConfigurationParameters.MQTT_USERNAME)
 message_limit = 1000
 
-mqtt_client = mqtt.Client(vehicle_id)
-mqtt_client.on_message = on_message
-mqtt_client.on_connect = on_connect
-mqtt_client.username_pw_set(MqttConfigurationParameters.MQTT_USERNAME, MqttConfigurationParameters.MQTT_PASSWORD)
+mqtt_client1 = mqtt.Client(vehicle_id + "_1")  
+mqtt_client1.on_message = on_message
+mqtt_client1.on_connect = on_connect
+mqtt_client1.username_pw_set(MqttConfigurationParameters.MQTT_USERNAME, MqttConfigurationParameters.MQTT_PASSWORD)
 
-mqtt_client.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
-mqtt_client.loop_forever()
+mqtt_client1.connect(MqttConfigurationParameters.BROKER_ADDRESS, MqttConfigurationParameters.BROKER_PORT)
+mqtt_client1.loop_forever()
